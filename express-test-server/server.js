@@ -4,6 +4,7 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const CryptoJS = require("crypto-js");
 const cors = require("cors");
+const cryptoModule = require('../security-integrated-react-application/src/cryptoUtils');
 
 const app = express();
 const port = 3001;
@@ -35,7 +36,7 @@ app.post("/create", (req, res) => {
   decryptedMessage = CryptoJS.AES.decrypt(atob(message), decodedKey).toString(
     CryptoJS.enc.Utf8
   );
-  
+
   messageData.push(decryptedMessage);
   console.log("Message:", messageData.at(-1));
   
@@ -48,41 +49,23 @@ app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
 
+
 app.get("/get/:id", (req, res, next) => {
   const id = req.params.id;
   const encryptedKey = req.headers["x-timestamp"];
   console.log("get API called ID:", id);
+  let message;
+  if(messageData.at(id)==undefined){
+    message = "No data exist for the id";
+  } else {
+    message = messageData.at(id);
+  }
 
-  const message = messageData.at(id);
   console.log("DATA ",messageData);
   console.log(message);
-  const key = decryptKey(encryptedKey, STATIC_KEY);
-  const encryptedMessage = encryptData(message,key);
-  const msg = decryptData(encryptedMessage,key);
+  const key = cryptoModule.decryptKey(encryptedKey, STATIC_KEY);
+  const encryptedMessage = cryptoModule.encryptData(message,key);
+  const msg = cryptoModule.decryptData(encryptedMessage,key);
 
-//   res.header('X-Timestamp', encryptionKey);
   res.json({ encryptedMessage });
 });
-
-const decryptKey = (encryptedKey, staticKey) => {
-  const decryptedEncryptiondKey = CryptoJS.AES.decrypt(
-    encryptedKey,
-    staticKey
-  ).toString(CryptoJS.enc.Utf8);
-  const decodedKey = CryptoJS.enc.Base64.parse(
-    decryptedEncryptiondKey
-  ).toString(CryptoJS.enc.Utf8);
-  return decodedKey;
-};
-
-const encryptData = (data, key) => {
-    const encryptedData = CryptoJS.AES.encrypt(data, key).toString();
-    return encryptedData;
-  };
-
-const decryptData = (encryptedData, key) => {
-  const decryptedData = CryptoJS.AES.decrypt(encryptedData, key).toString(
-    CryptoJS.enc.Utf8
-  );
-  return decryptedData;
-};
